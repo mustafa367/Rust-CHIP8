@@ -106,16 +106,19 @@ impl Emu {
             },
             (0x1,   _,   _,   _, ) => {
                 let nnn = op & 0x0FFF;
+
                 self.pc = nnn;
             },
             (0x2,   _,   _,   _, ) => {
                 let nnn = op & 0x0FFF;
+
                 self.push(self.pc);
                 self.pc = nnn;
             },
             (0x3,   _,   _,   _, ) => {
                 let x = hex2 as usize;
                 let nn = (op & 0x0FF) as u8;
+
                 if self.v_reg[x] == nn {
                     self.pc += 2;
                 }
@@ -123,6 +126,7 @@ impl Emu {
             (0x4,   _,   _,   _, ) => {
                 let x = hex2 as usize;
                 let nn = (op & 0x0FF) as u8;
+
                 if self.v_reg[x] != nn {
                     self.pc += 2;
                 }
@@ -130,6 +134,7 @@ impl Emu {
             (0x5,   _,   _,   0, ) => {
                 let x = hex2 as usize;
                 let y = hex3 as usize;
+
                 if self.v_reg[x] == self.v_reg[y] {
                     self.pc += 2;
                 }
@@ -137,17 +142,82 @@ impl Emu {
             (0x6,   _,   _,   _, ) => {
                 let x = hex2 as usize;
                 let nn = (op & 0x0FF) as u8;
+
                 self.v_reg[x] = nn;
             },
             (0x7,   _,   _,   _, ) => {
                 let x = hex2 as usize;
                 let nn = (op & 0x0FF) as u8;
+
                 self.v_reg[x] = self.v_reg[x].wrapping_add(nn);
             },
             (0x8,   _,   _,   0, ) => {
                 let x = hex2 as usize;
                 let y = hex3 as usize;
+
                 self.v_reg[x] = self.v_reg[y];
+            },
+            (0x8,   _,   _,   1, ) => {
+                let x = hex2 as usize;
+                let y = hex3 as usize;
+
+                self.v_reg[x] |= self.v_reg[y];
+            },
+            (0x8,   _,   _,   2, ) => {
+                let x = hex2 as usize;
+                let y = hex3 as usize;
+
+                self.v_reg[x] &= self.v_reg[y];
+            },
+            (0x8,   _,   _,   3, ) => {
+                let x = hex2 as usize;
+                let y = hex3 as usize;
+
+                self.v_reg[x] ^= self.v_reg[y];
+            },
+            (0x8,   _,   _,   4, ) => {
+                let x = hex2 as usize;
+                let y = hex3 as usize;
+
+                (new_vx, carry) = self.v_reg[x].wrapping_add(self.v_reg[y]);
+                let new_vf = if carry { 1 } else { 0 };
+
+                self.v_reg[x] = new_vx;
+                self.v_reg[0xF] = new_vf;
+            },
+            (0x8,   _,   _,   5, ) => {
+                let x = hex2 as usize;
+                let y = hex3 as usize;
+
+                (new_vx, borrow) = self.v_reg[x].wrapping_sub(self.v_reg[y]);
+                let new_vf = if borrow { 0 } else { 1 };
+
+                self.v_reg[x] = new_vx;
+                self.v_reg[0xF] = new_vf;
+            },
+            (0x8,   _,   _,   6, ) => {
+                let x = hex2 as usize;
+           
+                let lsb = self.v_reg[x] & 1;
+                self.v_reg[x] >>= 1;
+                self.v_reg[0xF] = lsb;
+            },
+            (0x8,   _,   _,   7, ) => {
+                let x = hex2 as usize;
+                let y = hex3 as usize;
+
+                (new_vx, borrow) = self.v_reg[y].wrapping_sub(self.v_reg[x]);
+                let new_vf = if borrow { 0 } else { 1 };
+
+                self.v_reg[x] = new_vx;
+                self.v_reg[0xF] = new_vf;
+            },
+            (0x8,   _,   _, 0xE, ) => {
+                let x = hex2 as usize;
+           
+                let msb = (self.v_reg[x] >> 7) & 1;
+                self.v_reg[x] <<= 1;
+                self.v_reg[0xF] = msb;
             },
             (_, _, _, _, ) => unimplemented!("Unimplemented opcode: {}", op),
         }
