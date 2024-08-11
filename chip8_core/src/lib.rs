@@ -344,7 +344,7 @@ impl Emu {
                     self.ram[i + idx] = self.v_reg[idx];
                 }
             },
-            (0xF,  _, 0x5, 0x5) {
+            (0xF,  _, 0x6, 0x5) {
                 let x = hex2 as usize;
                 let i = self.i_reg as usize;
                 for idx in 0..=x {
