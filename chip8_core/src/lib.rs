@@ -52,13 +52,14 @@ impl Emu {
             i_reg: 0,
             sp: 0,
             keys: [false; NUM_KEYS],
-            stack: [u16; STACK_SIZE],
+            stack: [0; STACK_SIZE],
             dt: 0,
             st: 0,
-        }
+        };
         new_emu.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
         new_emu
     }
+        
 
     pub fn reset(&mut self) {
         self.pc = START_ADDR;
@@ -66,12 +67,12 @@ impl Emu {
         self.screen = [false; SCREEN_HEIGHT * SCREEN_WIDTH];
         self.v_reg = [0; NUM_REGS];
         self.i_reg = 0;
-        sp: 0;
-        keys: [false; NUM_KEYS];
-        stack: [u16; STACK_SIZE];
-        dt: 0;
-        st: 0;
-        new_emu.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
+        self.sp = 0;
+        self.keys = [false; NUM_KEYS];
+        self.stack = [0; STACK_SIZE];
+        self.dt = 0;
+        self.st = 0;
+        self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
     }
 
     fn push(&mut self, val: u16) {
@@ -81,7 +82,7 @@ impl Emu {
 
     fn pop(&mut self) -> u16 {
         self.sp -= 1;
-        self.stack[self.sp as usize];
+        self.stack[self.sp as usize]
     }
 
     pub fn tick(&mut self) {
@@ -181,7 +182,7 @@ impl Emu {
                 let x = hex2 as usize;
                 let y = hex3 as usize;
 
-                (new_vx, carry) = self.v_reg[x].wrapping_add(self.v_reg[y]);
+                let (new_vx, carry) = self.v_reg[x].overflowing_add(self.v_reg[y]);
                 let new_vf = if carry { 1 } else { 0 };
 
                 self.v_reg[x] = new_vx;
@@ -191,7 +192,7 @@ impl Emu {
                 let x = hex2 as usize;
                 let y = hex3 as usize;
 
-                (new_vx, borrow) = self.v_reg[x].wrapping_sub(self.v_reg[y]);
+                let (new_vx, borrow) = self.v_reg[x].overflowing_sub(self.v_reg[y]);
                 let new_vf = if borrow { 0 } else { 1 };
 
                 self.v_reg[x] = new_vx;
@@ -208,7 +209,7 @@ impl Emu {
                 let x = hex2 as usize;
                 let y = hex3 as usize;
 
-                (new_vx, borrow) = self.v_reg[y].wrapping_sub(self.v_reg[x]);
+                let (new_vx, borrow) = self.v_reg[y].overflowing_sub(self.v_reg[x]);
                 let new_vf = if borrow { 0 } else { 1 };
 
                 self.v_reg[x] = new_vx;
@@ -240,10 +241,10 @@ impl Emu {
                 self.pc = (self.v_reg[0] as u16) + nnn;
             },
             (0xC,   _,   _,   _, ) => {
-                let x = hex2;
-                let nn = op & 0x00FF;
-           
-                self.pc = (self.v_reg[0] as u16) + nnn;
+                let x = hex2 as usize;
+                let nn = (op & 0x00FF) as u8;
+                let rng: u8 = random();
+                self.v_reg[x] = rng & nn;
             },
             (0xD,   _,   _,   _, ) => {
                 let x_coord = self.v_reg[hex2 as usize] as  u16;
@@ -281,7 +282,7 @@ impl Emu {
                     self.pc += 2;
                 }
             },
-            (0xE,  _, 0xA, 0x1) {
+            (0xE,  _, 0xA, 0x1) => {
                 let x = hex2 as usize;
                 let vx = self.v_reg[x];
                 let key = self.keys[vx as usize];
@@ -289,11 +290,11 @@ impl Emu {
                     self.pc += 2;
                 }
             },
-            (0xF,  _, 0x0, 0x7) {
+            (0xF,  _, 0x0, 0x7) => {
                 let x = hex2 as usize;
                 self.v_reg[x] = self.dt;
             },
-            (0xF,   _, 0x0, 0xA) {
+            (0xF,   _, 0x0, 0xA) => {
                 let x = hex2 as usize;
                 let mut pressed = false;
                 for i in 0..self.keys.len() {
@@ -307,27 +308,27 @@ impl Emu {
                     }
                 }
             },
-            (0xF,  _, 0x1, 0x5) {
+            (0xF,  _, 0x1, 0x5) => {
                 let x = hex2 as usize;
                 self.dt = self.v_reg[x];
             },
-            (0xF,  _, 0x1, 0x8) {
+            (0xF,  _, 0x1, 0x8) => {
                 let x = hex2 as usize;
                 self.st = self.v_reg[x];
             },
-            (0xF,  _, 0x1, 0xE) {
+            (0xF,  _, 0x1, 0xE) => {
                 let x = hex2 as usize;
                 let vx = self.v_reg[x] as u16;
                 self.i_reg = self.i_reg.wrapping_add(vx);
             },
-            (0xF,  _, 0x2, 0x9) {
+            (0xF,  _, 0x2, 0x9) => {
                 let x = hex2 as usize;
                 let c = self.v_reg[x] as u16;
                 self.i_reg = c * 5;
             },
-            (0xF,  _, 0x3, 0x3) {
+            (0xF,  _, 0x3, 0x3) => {
                 let x = hex2 as usize;
-                let vx = self.v_reg[x] as u16;
+                let vx = self.v_reg[x] as f32;
                 
                 let hundreds = (vx / 100.0).floor() as u8;
                 let     tens = (vx /  10.0).floor() as u8;
@@ -337,14 +338,14 @@ impl Emu {
                 self.ram[(self.i_reg + 1) as usize] =     tens;
                 self.ram[(self.i_reg + 2) as usize] =     ones;
             },
-            (0xF,  _, 0x5, 0x5) {
+            (0xF,  _, 0x5, 0x5) => {
                 let x = hex2 as usize;
                 let i = self.i_reg as usize;
                 for idx in 0..=x {
                     self.ram[i + idx] = self.v_reg[idx];
                 }
             },
-            (0xF,  _, 0x6, 0x5) {
+            (0xF,  _, 0x6, 0x5) => {
                 let x = hex2 as usize;
                 let i = self.i_reg as usize;
                 for idx in 0..=x {
@@ -377,7 +378,7 @@ impl Emu {
     }
 
     pub fn get_display(&self) -> &[bool] {
-        &self.screen;
+        &self.screen
     }
 
     pub fn keypress(&mut self, idx: usize, pressed: bool) {
