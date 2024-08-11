@@ -1,3 +1,5 @@
+use rand::random;
+
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 
@@ -218,6 +220,136 @@ impl Emu {
                 let msb = (self.v_reg[x] >> 7) & 1;
                 self.v_reg[x] <<= 1;
                 self.v_reg[0xF] = msb;
+            },
+            (0x9,   _,   _, 0x0, ) => {
+                let x = hex2 as usize;
+                let y = hex3 as usize;
+           
+                if self.v_reg[x] != self.v_reg[y] {
+                    self.pc += 2;
+                }
+            },
+            (0xA,   _,   _,   _, ) => {
+                let nnn = op & 0x0FFF;
+           
+                self.i_reg = nnn;
+            },
+            (0xB,   _,   _,   _, ) => {
+                let nnn = op & 0x0FFF;
+           
+                self.pc = (self.v_reg[0] as u16) + nnn;
+            },
+            (0xC,   _,   _,   _, ) => {
+                let x = hex2;
+                let nn = op & 0x00FF;
+           
+                self.pc = (self.v_reg[0] as u16) + nnn;
+            },
+            (0xD,   _,   _,   _, ) => {
+                let x_coord = self.v_reg[hex2 as usize] as  u16;
+                let y_coord = self.v_reg[hex3 as usize] as  u16;
+                let num_rows = hex4;
+
+                let mut flipped = false;
+                for y_line in 0..num_rows {
+                    let addr = self.i_reg + y_line as u16;
+                    let pixels = self.ram[addr as usize];
+
+                    for x_line in 0..8 {
+                        if (pixels & (0b1000_0000 >> x_line)) != 0 {
+                            let x = (x_coord + x_line) as usize % SCREEN_WIDTH;
+                            let y = (y_coord + y_line) as usize % SCREEN_HEIGHT;
+
+                            let idx = x + SCREEN_WIDTH * y;
+                            flipped |= self.screen[idx];
+                            self.screen[idx] ^= true;
+                        }
+                    }
+                }
+
+                if flipped {
+                    self.v_reg[0xF] = 1;
+                } else {
+                    self.v_reg[0xF] = 0;
+                }
+            },
+            (0xE,   _, 0x9, 0xE, ) => {
+                let x = hex2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+                if key {
+                    self.pc += 2;
+                }
+            },
+            (0xE,  _, 0xA, 0x1) {
+                let x = hex2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+                if !key {
+                    self.pc += 2;
+                }
+            },
+            (0xF,  _, 0x0, 0x7) {
+                let x = hex2 as usize;
+                self.v_reg[x] = self.dt;
+            },
+            (0xF,   _, 0x0, 0xA) {
+                let x = hex2 as usize;
+                let mut pressed = false;
+                for i in 0..self.keys.len() {
+                    if self.keys[i] {
+                        self.v_reg[x] = i as u8;
+                        pressed = true;
+                        break;
+                    }
+                    if !pressed {
+                        self.pc -= 2;
+                    }
+                }
+            },
+            (0xF,  _, 0x1, 0x5) {
+                let x = hex2 as usize;
+                self.dt = self.v_reg[x];
+            },
+            (0xF,  _, 0x1, 0x8) {
+                let x = hex2 as usize;
+                self.st = self.v_reg[x];
+            },
+            (0xF,  _, 0x1, 0xE) {
+                let x = hex2 as usize;
+                let vx = self.v_reg[x] as u16;
+                self.i_reg = self.i_reg.wrapping_add(vx);
+            },
+            (0xF,  _, 0x2, 0x9) {
+                let x = hex2 as usize;
+                let c = self.v_reg[x] as u16;
+                self.i_reg = c * 5;
+            },
+            (0xF,  _, 0x3, 0x3) {
+                let x = hex2 as usize;
+                let vx = self.v_reg[x] as u16;
+                
+                let hundreds = (vx / 100.0).floor() as u8;
+                let     tens = (vx /  10.0).floor() as u8;
+                let     ones = (vx %  10.0).floor() as u8;
+
+                self.ram[(self.i_reg + 0) as usize] = hundreds;
+                self.ram[(self.i_reg + 1) as usize] =     tens;
+                self.ram[(self.i_reg + 2) as usize] =     ones;
+            },
+            (0xF,  _, 0x5, 0x5) {
+                let x = hex2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..=x {
+                    self.ram[i + idx] = self.v_reg[idx];
+                }
+            },
+            (0xF,  _, 0x5, 0x5) {
+                let x = hex2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..=x {
+                    self.v_reg[idx] = self.ram[i + idx];
+                }
             },
             (_, _, _, _, ) => unimplemented!("Unimplemented opcode: {}", op),
         }
