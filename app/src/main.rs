@@ -16,7 +16,7 @@ fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
-        .window("Chip-8 Emulator", WINDOW_WIDTH, WINDOW_WIDTH)
+        .window("Chip-8 Emulator", WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered()
         .opengl()
         .build()
