@@ -103,7 +103,7 @@ impl Emu {
             (0x0, 0x0, 0xE, 0x0, ) => {
                 self.screen = [false; SCREEN_HEIGHT * SCREEN_WIDTH];
             },
-            (0x0, 0x0, 0xE, 0x0, ) => {
+            (0x0, 0x0, 0xE, 0xE, ) => {
                 let ret_addr = self.pop();
                 self.pc = ret_addr;
             },
@@ -352,7 +352,7 @@ impl Emu {
                     self.v_reg[idx] = self.ram[i + idx];
                 }
             },
-            (_, _, _, _, ) => unimplemented!("Unimplemented opcode: {}", op),
+            (_, _, _, _, ) => unimplemented!("Unimplemented opcode: {:#06x}", op),
         }
     }
 
