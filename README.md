@@ -5,7 +5,8 @@
 A CHIP-8 implementation written in Rust. 
 
 ## Pre-Requisite 
-SDL2 for video output.
+
+SDL2 libraries need to be installed for video output.
 
 ## Build and Run
 
