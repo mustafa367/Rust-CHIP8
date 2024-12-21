@@ -2,7 +2,7 @@
 
 ![image](https://github.com/user-attachments/assets/08c6feb4-3378-433e-94e8-c2ccbc8e2846)
 
-A CHIP-8 implementation written in Rust. 
+A CHIP-8 emulator written in Rust. 
 
 ## Pre-Requisite 
 
